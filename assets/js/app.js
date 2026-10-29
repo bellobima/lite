@@ -30,6 +30,20 @@
     });
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && backdrop && !backdrop.hidden) closeContact();
+        if (event.key === 'Tab' && backdrop && !backdrop.hidden) {
+            const focusable = [...backdrop.querySelectorAll('button, a[href], textarea, input, select, [tabindex]:not([tabindex="-1"])')]
+                .filter((element) => !element.disabled && element.getClientRects().length);
+            if (!focusable.length) return;
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        }
     });
 
     document.querySelectorAll('[data-whatsapp-open]').forEach((button) => {
@@ -40,37 +54,17 @@
         });
     });
 
-    document.querySelectorAll('[data-hero-slider]').forEach((slider) => {
-        const slides = [...slider.querySelectorAll('.hero-slide')];
-        const dots = [...slider.querySelectorAll('.hero-dot')];
-        if (slides.length < 2) return;
-        let current = 0;
-        let timer;
-        const activate = (index) => {
-            current = index;
-            slides.forEach((slide, position) => slide.classList.toggle('is-active', position === index));
-            dots.forEach((dot, position) => {
-                dot.classList.toggle('is-active', position === index);
-                dot.setAttribute('aria-pressed', String(position === index));
-            });
-        };
-        const start = () => {
-            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-            window.clearInterval(timer);
-            timer = window.setInterval(() => activate((current + 1) % slides.length), 6500);
-        };
-        dots.forEach((dot, index) => dot.addEventListener('click', () => {
-            activate(index);
-            start();
-        }));
-        slider.addEventListener('mouseenter', () => window.clearInterval(timer));
-        slider.addEventListener('mouseleave', start);
-        slider.addEventListener('focusin', () => window.clearInterval(timer));
-        slider.addEventListener('focusout', start);
-        start();
+    document.querySelectorAll('form[data-loading-label]').forEach((form) => {
+        form.addEventListener('submit', () => {
+            const button = form.querySelector('button[type="submit"]');
+            if (!button) return;
+            button.disabled = true;
+            button.setAttribute('aria-busy', 'true');
+            button.textContent = form.dataset.loadingLabel || 'Please wait…';
+        });
     });
 
-    const animated = document.querySelectorAll('.panel-card, .stat-card, .page-intro');
+    const animated = document.querySelectorAll('.panel-card, .stat-card, .page-intro, .step-card, .support-card');
     if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         const observer = new IntersectionObserver((entries, currentObserver) => {
             entries.forEach((entry) => {

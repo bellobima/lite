@@ -76,6 +76,26 @@ function app_header(string $title, string $active = ''): void
 {
     $user = current_user();
     $role = $user['role'] ?? 'guest';
+    $notification = null;
+    $notificationUrl = '';
+    $notificationLabel = '';
+    if ($role === 'admin') {
+        $notification = (int)db()->query("SELECT COUNT(*) FROM tickets WHERE status = 'Submitted'")->fetchColumn();
+        $notificationUrl = 'admin-complaints.php?status=Submitted';
+        $notificationLabel = 'New complaints awaiting review';
+    } elseif ($role === 'department') {
+        $statement = db()->prepare("SELECT COUNT(*) FROM tickets WHERE department_id = ? AND status NOT IN ('Resolved','Closed')");
+        $statement->execute([$user['department_id']]);
+        $notification = (int)$statement->fetchColumn();
+        $notificationUrl = 'department-cases.php';
+        $notificationLabel = 'Open cases assigned to your department';
+    } elseif ($role === 'student') {
+        $statement = db()->prepare("SELECT COUNT(*) FROM tickets WHERE student_id = ? AND status NOT IN ('Resolved','Closed')");
+        $statement->execute([$user['id']]);
+        $notification = (int)$statement->fetchColumn();
+        $notificationUrl = 'student.php';
+        $notificationLabel = 'Your open complaints';
+    }
     $menus = match ($role) {
         'admin' => [
             ['admin.php', 'Overview', 'icon-grid', 'admin'],
@@ -102,7 +122,9 @@ function app_header(string $title, string $active = ''): void
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#102B46">
     <title><?= e($title) ?> | FCWM Student Support</title>
+    <link rel="icon" type="image/x-icon" href="assets/img/favicon.ico">
     <link rel="stylesheet" href="assets/css/bootstrap-material.css">
     <link rel="stylesheet" href="assets/css/shreerang-material.css">
     <link rel="stylesheet" href="assets/css/uikit.css">
@@ -130,13 +152,20 @@ function app_header(string $title, string $active = ''): void
     <main class="app-main">
         <header class="topbar">
             <div><span class="eyebrow">FEDERAL COLLEGE OF WILDLIFE MANAGEMENT</span><h1><?= e($title) ?></h1></div>
-            <div class="topbar-user">
+            <div class="topbar-actions">
+                <?php if ($notification !== null): ?>
+                    <a class="notification-link" href="<?= e($notificationUrl) ?>" aria-label="<?= e($notificationLabel . ': ' . $notification) ?>" title="<?= e($notificationLabel) ?>">
+                        <i class="feather icon-bell" aria-hidden="true"></i><span class="notification-count"><?= $notification ?></span><span class="notification-label"><?= e($role === 'admin' ? 'Awaiting review' : 'Open cases') ?></span>
+                    </a>
+                <?php endif; ?>
+                <div class="topbar-user">
                 <?php if ($user): ?>
                     <span class="avatar"><?= e(strtoupper(substr($user['full_name'], 0, 1))) ?></span>
                     <span class="user-label"><strong><?= e($user['full_name']) ?></strong><small><?= e(ucfirst($role)) ?><?= !empty($user['department_name']) ? ' · ' . e($user['department_name']) : '' ?></small></span>
                 <?php else: ?>
                     <a class="btn btn-outline-primary btn-sm" href="login.php">Sign in</a>
                 <?php endif; ?>
+                </div>
             </div>
         </header>
         <section class="page-content">
@@ -147,7 +176,12 @@ function app_footer(): void
 {
     ?>
         </section>
-        <footer class="app-footer"><span>© <?= date('Y') ?> Federal College of Wildlife Management</span><span><button class="footer-contact contact-open" type="button" data-contact-open>Contact support</button> · Student Complaint &amp; Support Portal</span></footer>
+        <footer class="app-footer">
+            <span>© <?= date('Y') ?> Federal College of Wildlife Management</span>
+            <nav class="footer-links" aria-label="Footer navigation">
+                <a href="index.php">Home</a><a href="track.php">Track a complaint</a><a href="login.php">Sign in</a><button class="footer-contact contact-open" type="button" data-contact-open>Contact support</button>
+            </nav>
+        </footer>
     </main>
 </div>
 <button class="whatsapp-float" type="button" aria-label="Contact us on WhatsApp" data-whatsapp-open>

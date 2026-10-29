@@ -25,16 +25,17 @@ app_header('Track a complaint', 'track');
 <div class="panel-card form-panel">
     <h2 class="panel-title mb-2">Check your complaint status</h2>
     <p class="text-muted mb-4">Enter the reference number from your confirmation and the student matric number used to submit it.</p>
-    <?php if ($error): ?><div class="alert alert-warning"><?= e($error) ?></div><?php endif; ?>
-    <form method="post">
+    <?php if ($error): ?><div class="alert alert-warning" id="track-error" role="alert"><?= e($error) ?></div><?php endif; ?>
+    <form method="post" data-loading-label="Searching…">
         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-        <div class="form-group"><label class="form-label">Complaint reference</label><input class="form-control" name="reference" required placeholder="FCWM-YYMM-XXXXXXXXXX" value="<?= e($reference) ?>"></div>
-        <?php if (!$user || $user['role'] !== 'student'): ?><div class="form-group"><label class="form-label">Student matric number</label><input class="form-control" name="matric_number" required value="<?= e($matric) ?>"></div><?php endif; ?>
-        <button class="btn btn-primary mt-2" type="submit">Find complaint</button>
+        <div class="form-group"><label class="form-label" for="track-reference">Complaint reference</label><input class="form-control" id="track-reference" name="reference" maxlength="32" required autocomplete="off" placeholder="FCWM-YYMM-XXXXXXXXXX" value="<?= e($reference) ?>" <?= $error ? 'aria-invalid="true" aria-describedby="track-error"' : '' ?>></div>
+        <?php if (!$user || $user['role'] !== 'student'): ?><div class="form-group"><label class="form-label" for="track-matric">Student matric number</label><input class="form-control" id="track-matric" name="matric_number" maxlength="60" required autocomplete="off" value="<?= e($matric) ?>"></div><?php endif; ?>
+        <button class="btn btn-primary mt-2" type="submit">Find complaint <i class="feather icon-arrow-right" aria-hidden="true"></i></button>
     </form>
 </div>
 <?php if ($ticket): ?>
 <div class="panel-card form-panel">
+    <div class="tracking-result-message" role="status"><i class="feather icon-check-circle" aria-hidden="true"></i> Complaint found. Here is the latest status.</div>
     <div class="ticket-heading"><div><span class="ticket-ref"><?= e($ticket['reference']) ?></span><h3 class="panel-title mt-2 mb-1"><?= e($ticket['subject']) ?></h3><span class="text-muted"><?= e($ticket['category']) ?></span></div><span class="status-pill <?= e(status_class($ticket['status'])) ?>"><?= e($ticket['status']) ?></span></div>
     <hr><div class="row"><div class="col-md-6"><small class="text-muted">Assigned department</small><div><?= e($ticket['department_name'] ?? 'Awaiting assignment') ?></div></div><div class="col-md-6"><small class="text-muted">Last updated</small><div><?= e(date('M j, Y \a\t g:i a', strtotime($ticket['updated_at']))) ?></div></div></div>
     <?php if ($user && $user['role'] === 'student' && $ticket['student_id'] === $user['id']): ?><a href="ticket.php?id=<?= (int)$ticket['id'] ?>" class="btn btn-outline-primary mt-4">View full complaint history</a><?php endif; ?>
